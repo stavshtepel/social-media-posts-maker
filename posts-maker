@@ -1,0 +1,119 @@
+#!/bin/sh
+
+set -euo pipefail
+# [ ! -d ~/Pictures/images-stock/made-posts ] && mkdir ~/Pictures/images-stock/made-posts
+imageCategory=$(printf "background\nluxury\nlifestyle\nnature\ntravel\nsuccess\nbusiness\nluxury\nmixed" | dmenu -p "Enter here the category of the images you want:")
+[ -z $imageCategory ] && exit 0
+numOfPosts=$(printf "\n" | dmenu -p "Enter here the number of posts you want to get: ")
+[ -z $numOfPosts ] && exit 0
+caption=$(printf "\n" | dmenu -p "Enter here the caption you want to add to the text: ")
+chosenLanguage=$(printf "english\nhebrew" | dmenu -p "Choose the language you want your posts' text to have: ")
+[ -z $chosenLanguage ] && exit 0
+customLogo=$(printf "\n" | dmenu -p "Add here the custom logo you want to have in your posts: ") && notify-send "Your posts are in preperation..."
+[ "$chosenLanguage" == "english" ] && chosenFont="Adderley-bold"
+[ "$chosenLanguage" == "hebrew" ] && chosenFont="Popper-Serif"
+
+# sed -n -e '/^$/d' -e '/[^[:upper:] ]/p' -e quotes4.txt
+num=1
+someNum=$(($(ls --color=none ~/Pictures/images-stock/finished-posts | sort -nr | head -n 1 | cut -d '-' -f2 )+1))
+[ ! -d ~/Pictures/images-stock/finished-posts/$someNum ] && mkdir ~/Pictures/images-stock/finished-posts/$someNum
+imageNum=1
+# randomTextA=$(cat ~/scripts/posts-script-stuff/quotes1.txt ~/scripts/posts-script-stuff/quotes2.txt ~/scripts/posts-script-stuff/quotes3.txt | sed -e '/^$/d' -e '/^.\{150\}./d' | shuf)
+postNum=1
+postWriter() {
+randomImages=$(ls ~/Pictures/images-stock/background-images/$imageCategory | head -n $imageNum | tail -1)
+# read w h < <(identify -format "%w %h" "$randomImages")
+w=$(identify -format %w ~/Pictures/images-stock/background-images/$imageCategory/$randomImages)
+h=$(identify -format %h ~/Pictures/images-stock/background-images/$imageCategory/$randomImages)
+n=$w
+[ $h -lt $n ] && n=$h
+set -u
+declare -a textPosition
+textPosition=("+50+100" "+25+70" "+100+20" "+30+100" "+100+50" "+100+100" "+100+100" "-50-200" "-25-70" "-100-20" "-30-100" "-100-50" "-100-100" "+100-100" "-100+100" "-100+100" "-100+100")
+randomTextPosition=${textPosition[$(shuf -i 0-5 -n 1)]-}
+[ $chosenLanguage == "english" ] && randomText=$(cat ~/scripts/posts-script-stuff/english-quotes-best-3.txt | sed -e '/^$/d' -e '/^.\{150\}./d' | shuf -n 1)
+[ $chosenLanguage == "hebrew" ] && randomText=$(cat ~/scripts/posts-script-stuff/another-hebrew-quotes-3.txt | sed -e '/^$/d' -e '/^.\{150\}./d' | shuf -n 1 | sed 's/"//3')
+# randomText=$(curl -s 'https://www.oberlo.com/blog/motivational-quotes' -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:100.0) Gecko/20100101 Firefox/100.0' | pup 'body text{}' | grep --color=none '^“.' | sed -e '/^.\{150\}./d' -e '/39/d' -e '1d' | shuf -n 1 | sed 's/\(\w\w*\W*\w\w*\W*\w\w*\W*\)/\1\n/g' | sed -e '/^$/d')
+if [ -d "$caption" ]; then
+	randomTextWithCaption="$randomText""\n$caption"
+else
+	randomTextWithCaption="$randomText"
+fi
+
+if [ "$customLogo" ] && [ $chosenLanguage == "english" ]; then
+ 	convert ~/Pictures/images-stock/background-images/$imageCategory/"$randomImages" -extent "${n}x${n}" -fill black -colorize 40% \
+ 	\( -size 500x -background none -gravity center -font "$chosenFont" -pointsize 50 \
+ 	-fill white \
+ 	caption:"$randomTextWithCaption" \
+ 	-trim +repage \) \
+ 	\( -clone 1 -background black -shadow 70x3+3+4 \) \
+ 	\( -clone 1 -clone 2 +swap -background none -layers merge +repage \) \
+ 	-delete 1,2 \
+ 	-gravity center -geometry "$randomTextPosition" -compose over -composite \
+ 	~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg
+	convert $customLogo -resize $((${n}/10)) "$customLogo"-A
+	convert ~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg -geometry +200+200 "$customLogo"-A -composite ~/Pictures/images-stock/finished-posts/$someNum/"$num".jpg
+	rm ~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg
+	rm "$customLogo"-A
+
+elif [ "$customLogo" ] && [ "$chosenLanguage" == "hebrew" ]; then
+ 	convert ~/Pictures/images-stock/background-images/$imageCategory/"$randomImages" -extent "${n}x${n}" -fill black -colorize 40% \
+ 	\( -size 500x -background none -gravity center -font "$chosenFont" -pointsize 50 \
+ 	-fill white -interline-spacing -18 \
+ 	caption:"$randomTextWithCaption" -trim +repage \
+ 	-trim +repage \) \
+ 	\( -clone 1 -background black -shadow 70x3+3+4 \) \
+ 	\( -clone 1 -clone 2 +swap -background none -layers merge +repage \) \
+ 	-delete 1,2 \
+ 	-gravity center -geometry "$randomTextPosition" -compose over -composite \
+ 	~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg
+	convert $customLogo -resize $((${n}/10)) "$customLogo"-A
+	convert ~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg -geometry +200+200 "$customLogo"-A -composite ~/Pictures/images-stock/finished-posts/$someNum/"$num".jpg
+	rm ~/Pictures/images-stock/finished-posts/$someNum/B-"$num".jpg
+	rm "$customLogo"-A
+
+elif [ -z "$customLogo" ] && [ "$chosenLanguage" == "english" ]; then
+ 	convert ~/Pictures/images-stock/background-images/$imageCategory/"$randomImages" -extent "${n}x${n}" -fill black -colorize 40% \
+ 	\( -size 500x -background none -gravity center -font "$chosenFont" -pointsize 50 \
+ 	-fill white \
+ 	caption:"$randomTextWithCaption" \
+ 	-trim +repage \) \
+ 	\( -clone 1 -background black -shadow 70x3+3+4 \) \
+ 	\( -clone 1 -clone 2 +swap -background none -layers merge +repage \) \
+ 	-delete 1,2 \
+ 	-gravity center -geometry "$randomTextPosition" -compose over -composite \
+ 	~/Pictures/images-stock/finished-posts/$someNum/"$num".jpg
+
+elif [ -z "$customLogo" ] && [ "$chosenLanguage" == "hebrew" ]; then
+ 	convert -gravity center ~/Pictures/images-stock/background-images/$imageCategory/"$randomImages" -extent "${n}x${n}" -fill black -colorize 40% \
+ 	\( -size 500x -background none -gravity center -font "$chosenFont" -pointsize 50 \
+ 	-fill white -interline-spacing -15 \
+	caption:"$randomTextWithCaption" -trim +repage \
+ 	-trim +repage \) \
+ 	\( -clone 1 -background black -shadow 70x3+3+4 \) \
+ 	\( -clone 1 -clone 2 +swap -background none -layers merge +repage \) \
+ 	-delete 1,2 \
+ 	-gravity center -geometry "$randomTextPosition" -compose over -composite \
+ 	~/Pictures/images-stock/finished-posts/$someNum/"$num".jpg
+
+	[ ! -d ~/Pictures/images-stock/finished-posts/good-$someNum ] && mkdir ~/Pictures/images-stock/finished-posts/good-$someNum
+	convert ~/Pictures/images-stock/finished-posts/$someNum/"$num".jpg -gravity South -font "$chosenFont" -pointsize 25 -fill white -annotate +0+20 "- מסרים פשוטים -" ~/Pictures/images-stock/finished-posts/good-$someNum/"$num".jpg
+fi
+
+postNum=$(($postNum+1))
+num=$(($num+1))
+imageNum=$(($imageNum+1))
+}
+
+# startPoint=$(ls ~/Pictures/images-stock/finished-posts | wc -l)
+if [ "$numOfPosts" ]; then
+      for (( i=1; i<=$(($numOfPosts)); i++ ))
+     	 do
+			 postWriter
+     	 done
+     	 notify-send "Your posts are now prepared"
+else
+      exit 0
+fi
+# [ -d ~/Pictures/images-stock/background-images/$imageCategory ] && rm -rf ~/Pictures/images-stock/background-images/luxury
+ranger ~/Pictures/images-stock/finished-posts/$someNum
